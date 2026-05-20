@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<title>知识点闪卡背诵</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  background: #f0f0f0;
+  color: #333;
+  min-height: 100%;
+  padding-bottom: 20px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  font-size: 16px;
+}
+
+/* 顶栏 */
+.topbar {
+  text-align: center;
+  padding: 10px 12px 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #555;
+}
+.topbar span { display: block; margin-bottom: 4px; }
+
+/* 模式栏 */
+.modes {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+}
+.modes button {
+  padding: 5px 12px;
+  border-radius: 14px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 0.76rem;
+  font-family: inherit;
+  color: #666;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.modes button.on {
+  background: #d4a017;
+  color: #fff;
+  border-color: #d4a017;
+  font-weight: 600;
+}
+
+/* 闪卡 */
+.card-area {
+  padding: 4px 10px;
+}
+.card-wrap {
+  max-width: 420px;
+  margin: 0 auto;
+  perspective: 800px;
+}
+
+.card {
+  position: relative;
+}
+.card-inner {
+  position: relative;
+  width: 100%;
+  padding-bottom: 75%;
+  transform-style: preserve-3d;
+  transition: transform 0.45s ease;
+}
+.card.flipped .card-inner { transform: rotateY(180deg); }
+
+.face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 18px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.front {
+  background: #fffef5;
+  border: 1px solid #e0dcc8;
+  z-index: 1;
+}
+.back {
+  background: #fffff0;
+  border: 1px solid #d4d0b8;
+  transform: rotateY(180deg);
+}
+.face .tag {
+  font-size: 0.65rem;
+  color: #bbb;
+  margin-bottom: 10px;
+  letter-spacing: 0.05em;
+}
+.face .txt {
+  font-size: 1.05rem;
+  line-height: 1.9;
+  text-align: center;
+  word-break: break-word;
+  padding: 0 4px;
+}
+
+.blk {
+  color: #d4380d;
+  border-bottom: 2px dashed #d4380d;
+  padding: 0 5px;
+  margin: 0 2px;
+  font-weight: 600;
+}
+.ans {
+  background: #ffe58f;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 700;
+  color: #8b6914;
+}
+
+/* 提示 */
+.hint {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #bbb;
+  padding: 2px 0;
+}
+
+/* 文件名 */
+.fname {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #999;
+  padding: 0 10px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 按钮 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: #444;
+  cursor: pointer;
+  min-height: 36px;
+  touch-action: manipulation;
+}
+.btn:active { background: #eee; }
+.btn.circle { width: 38px; height: 38px; padding: 0; border-radius: 50%; font-size: 1rem; }
+.btn.warn { color: #cf1322; border-color: #ffccc7; }
+.btn.warn:active { background: #fff1f0; }
+.btn.star { background: #fff7e6; border-color: #d4a017; color: #b07d10; font-weight: 600; }
+
+/* 控制栏 */
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 30px;
+  flex-wrap: wrap;
+}
+.controls .pos {
+  font-size: 0.78rem;
+  color: #888;
+  min-width: 50px;
+  text-align: center;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 9px 20px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  color: #fff;
+  background: #3a3a3a;
+  z-index: 999;
+  pointer-events: none;
+  animation: tin 0.25s ease, tout 0.25s ease 1.6s forwards;
+}
+@keyframes tin { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+@keyframes tout { to { opacity: 0; } }
+
+/* 桌面 */
+@media (min-width: 600px) {
+  .face { padding: 24px 20px; }
+  .face .txt { font-size: 1.12rem; }
+  .card-wrap { max-width: 520px; }
+  .card-inner { padding-bottom: 60%; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span id="pageTitle">知识点闪卡背诵</span>
+  <button class="btn" id="upBtn" style="font-size:0.7rem;padding:4px 10px;min-height:28px;">选择DOCX</button>
+  <input type="file" id="fileInp" accept=".docx" style="display:none">
+</div>
+
+<div class="modes">
+  <button class="on" data-mode="seq">顺序</button>
+  <button data-mode="rev">倒序</button>
+  <button data-mode="rand">随机</button>
+  <button data-mode="mem">记忆库</button>
+</div>
+
+<div class="card-area">
+  <div id="fileNameTag" class="fname"></div>
+  <div class="card-wrap">
+    <div class="card" id="card">
+      <div class="card-inner">
+        <div class="face front" id="faceFront">
+          <div class="tag">题目</div>
+          <div class="txt" id="qText"></div>
+        </div>
+        <div class="face back" id="faceBack">
+          <div class="tag">答案</div>
+          <div class="txt" id="aText"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hint" id="hint">点击卡片翻转 · 左右滑动切题</div>
+
+<div class="controls">
+  <button class="btn circle" id="prevBtn">◀</button>
+  <span class="pos" id="posText">-</span>
+  <button class="btn circle" id="nextBtn">▶</button>
+  <button class="btn" id="resetBtn" style="margin-left:2px;">↺</button>
+  <button class="btn star" id="memBtn" style="margin-left:4px;">☆ 记忆库</button>
+</div>
+
+<script>
+/* ================================================================
+   知识点闪卡背诵 — 纯离线 · Word版
+   打开即显示测试数据，选择 DOCX 可按需解析（需 JSZip CDN）
+   ================================================================ */
+
+// ---- 全局状态 ----
+var cards = [];          // 全部闪卡
+var order = [];           // 当前显示顺序（cards 的下标）
+var pos = 0;              // 当前位置
+var mode = 'seq';         // seq | rand | mem
+var memSet = new Set();   // 强化记忆库 id 集合
+var flipped = false;
+
+// ---- localStorage ----
+(function(){
+  try {
+    var raw = localStorage.getItem('fc-mem-v2');
+    if (raw) memSet = new Set(JSON.parse(raw));
+  } catch(e){}
+})();
+function saveMem(){ localStorage.setItem('fc-mem-v2', JSON.stringify([...memSet])); }
+
+function saveCards(){
+  try { localStorage.setItem('fc-cards-v2', JSON.stringify(cards)); } catch(e){}
+}
+function saveFileName(name){
+  try { localStorage.setItem('fc-fname-v2', name); } catch(e){}
+}
+function loadFileName(){
+  try { return localStorage.getItem('fc-fname-v2') || ''; } catch(e){ return ''; }
+}
+function loadCards(){
+  try {
+    var raw = localStorage.getItem('fc-cards-v2');
+    if (raw) cards = JSON.parse(raw);
+    return cards.length > 0;
+  } catch(e){ return false; }
+}
+
+// ---- 快捷 DOM ----
+function $(s){ return document.querySelector(s); }
+function $$(s){ return document.querySelectorAll(s); }
+
+// ---- Toast ----
+function toast(msg){
+  var el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(function(){ el.remove(); }, 2000);
+}
+
+// ============ 渲染卡片 ============
+function render(){
+  var cw = $('.card-wrap');
+
+  // 空状态
+  if (order.length === 0) {
+    cw.innerHTML = '<div style="text-align:center;color:#bbb;padding:60px 20px;">' +
+      (mode === 'mem' ? '记忆库暂无卡片' : '加载中…') + '</div>';
+    $('#hint').style.display = 'none';
+    $('#posText').textContent = '-';
+    return;
+  }
+
+  // 恢复 card 结构（空状态 innerHTML 可能覆盖了）
+  if (!$('#card')) {
+    cw.innerHTML =
+      '<div class="card" id="card"><div class="card-inner">' +
+      '<div class="face front" id="faceFront"><div class="tag">题目</div><div class="txt" id="qText"></div></div>' +
+      '<div class="face back" id="faceBack"><div class="tag">答案</div><div class="txt" id="aText"></div></div>' +
+      '</div></div>';
+  }
+
+  $('#hint').style.display = '';
+
+  var card = cards[order[pos]];
+  if (!card) return;
+
+  // 填空/无填空
+  if (card.ans.length === 0) {
+    $('#qText').innerHTML = card.full;
+    $('#aText').innerHTML = '<span style="color:#999;">（无高亮，整体记忆）</span><br><br>' + card.full;
+  } else {
+    $('#qText').innerHTML = card.qhtml;
+    $('#aText').innerHTML = card.ahtml;
+  }
+
+  // 记忆库按钮
+  if (memSet.has(card.id)) {
+    $('#memBtn').textContent = '⭐ 移出';
+    $('#memBtn').className = 'btn star';
+  } else {
+    $('#memBtn').textContent = '☆ 加入';
+    $('#memBtn').className = 'btn star';
+  }
+
+  $('#posText').textContent = (pos + 1) + ' / ' + order.length;
+
+  // 复位翻转
+  flipped = false;
+  var c = $('#card');
+  if (c) c.classList.remove('flipped');
+}
+
+// ============ 模式/顺序 ============
+function updateOrder(){
+  if (mode === 'rand') {
+    order = cards.map(function(_, i){ return i; });
+    for (var i = order.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+    pos = 0;
+  } else if (mode === 'rev') {
+    order = cards.map(function(_, i){ return i; }).reverse();
+    pos = 0;
+  } else if (mode === 'mem') {
+    order = [];
+    for (var i = 0; i < cards.length; i++) {
+      if (memSet.has(cards[i].id)) order.push(i);
+    }
+    pos = 0;
+    if (order.length === 0) toast('记忆库为空');
+  } else {
+    order = cards.map(function(_, i){ return i; });
+    pos = 0;
+  }
+}
+
+function refreshUI(){
+  $$('.modes button').forEach(function(b){
+    b.classList.toggle('on', b.dataset.mode === mode);
+  });
+  updateOrder();
+  render();
+}
+
+// ============ 测试数据 ============
+function loadTest(){
+  $('#fileNameTag').textContent = '经济法知识点01章.docx';
+  $('#pageTitle').textContent = '经济法知识点01章';
+  cards = [
+    { id: 'a1', full: '法代表的是统治阶级的整体意志，而不是个别人或个别集团的意志。',
+      qhtml: '法代表的是<span class="blk">(1)</span>的整体意志，而不是个别人或个别集团的意志。',
+      ahtml: '法代表的是<span class="ans">统治阶级</span>的整体意志，而不是个别人或个别集团的意志。',
+      ans: ['统治阶级'] },
+    { id: 'a2', full: '法是由国家强制力保证实施的行为规范',
+      qhtml: '法是由<span class="blk">(1)</span>保证实施的行为规范',
+      ahtml: '法是由<span class="ans">国家强制力</span>保证实施的行为规范',
+      ans: ['国家强制力'] },
+    { id: 'a3', full: '法是调整人的行为和社会关系的行为规范',
+      qhtml: '法是调整<span class="blk">(1)</span>和<span class="blk">(2)</span>的行为规范',
+      ahtml: '法是调整<span class="ans">行为</span>和<span class="ans">社会关系</span>的行为规范',
+      ans: ['行为', '社会关系'] },
+    { id: 'a4', full: '法是确定社会关系参加者的权利和义务的规范',
+      qhtml: '法是确定社会关系参加者的<span class="blk">(1)</span>和<span class="blk">(2)</span>的规范',
+      ahtml: '法是确定社会关系参加者的<span class="ans">权利</span>和<span class="ans">义务</span>的规范',
+      ans: ['权利', '义务'] },
+    { id: 'a5', full: '宪法＞法律＞行政法规＞地方性法规＞地方政府规章',
+      qhtml: '宪法＞法律＞<span class="blk">(1)</span>＞地方性法规＞<span class="blk">(2)</span>',
+      ahtml: '宪法＞法律＞<span class="ans">行政法规</span>＞地方性法规＞<span class="ans">地方政府规章</span>',
+      ans: ['行政法规', '地方政府规章'] },
+    { id: 'a6', full: '法律常见对应文件名称《 XX 法》',
+      qhtml: '法律常见对应文件名称<span class="blk">(1)</span>',
+      ahtml: '法律常见对应文件名称<span class="ans">《 XX 法》</span>',
+      ans: ['《 XX 法》'] },
+    { id: 'a7', full: '法规常见对应名称《 XX 条例》',
+      qhtml: '法规常见对应名称<span class="blk">(1)</span>',
+      ahtml: '法规常见对应名称<span class="ans">《 XX 条例》</span>',
+      ans: ['《 XX 条例》'] },
+    { id: 'a8', full: '规章常见对应名称《XX 办法》、《XX 通则》',
+      qhtml: '规章常见对应名称<span class="blk">(1)</span>、<span class="blk">(2)</span>',
+      ahtml: '规章常见对应名称<span class="ans">《XX 办法》</span>、<span class="ans">《XX 通则》</span>',
+      ans: ['《XX 办法》', '《XX 通则》'] },
+  ];
+  mode = 'seq';
+  refreshUI();
+}
+
+// ============ 翻转 / 下一题 ============
+$('.card-area').addEventListener('click', function(e){
+  if (order.length === 0) return;
+  if ($('.card-area').dataset.swiped === '1') {
+    delete $('.card-area').dataset.swiped;
+    return;
+  }
+  var card = e.target.closest('#card');
+  if (!card) return;
+
+  if (!flipped) {
+    // 正面 → 翻到答案面
+    flipped = true;
+    card.classList.add('flipped');
+  } else {
+    // 答案面 → 下一题
+    pos = (pos + 1) % order.length;
+    render();
+  }
+});
+
+// ============ 滑动切题 ============
+(function(){
+  var sx = 0, sy = 0, moved = false;
+  var area = $('.card-area');
+  area.addEventListener('touchstart', function(e){
+    if (order.length === 0) return;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+    moved = false;
+  }, { passive: true });
+  area.addEventListener('touchmove', function(e){
+    if (order.length === 0) return;
+    var dx = e.touches[0].clientX - sx;
+    var dy = e.touches[0].clientY - sy;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) moved = true;
+  }, { passive: true });
+  area.addEventListener('touchend', function(e){
+    if (order.length === 0 || !moved) return;
+    var dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) < 50) return;
+    area.dataset.swiped = '1';
+    pos = dx < 0
+      ? (pos + 1) % order.length
+      : (pos - 1 + order.length) % order.length;
+    render();
+  });
+})();
+
+// ============ 模式切换 ============
+$('.modes').addEventListener('click', function(e){
+  var btn = e.target.closest('button');
+  if (!btn) return;
+  mode = btn.dataset.mode;
+  refreshUI();
+});
+
+// ============ 记忆库 ============
+$('#memBtn').addEventListener('click', function(e){
+  e.stopPropagation();
+  if (order.length === 0) return;
+  var card = cards[order[pos]];
+  if (!card) return;
+  if (memSet.has(card.id)) {
+    memSet.delete(card.id);
+    toast('已移出记忆库');
+    if (mode === 'mem') updateOrder();
+  } else {
+    memSet.add(card.id);
+    toast('已加入记忆库');
+  }
+  saveMem();
+  render();
+});
+
+// ============ 导航 ============
+$('#prevBtn').addEventListener('click', function(){
+  if (order.length === 0) return;
+  pos = (pos - 1 + order.length) % order.length;
+  render();
+});
+$('#nextBtn').addEventListener('click', function(){
+  if (order.length === 0) return;
+  pos = (pos + 1) % order.length;
+  render();
+});
+
+// ============ 工具 ============
+$('#resetBtn').addEventListener('click', function(){
+  if (cards.length === 0) return;
+  pos = 0;
+  if (mode === 'rand') updateOrder();
+  render();
+  toast('已重置');
+});
+// ============ 键盘 ============
+document.addEventListener('keydown', function(e){
+  if (order.length === 0) return;
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); pos = (pos - 1 + order.length) % order.length; render(); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); pos = (pos + 1) % order.length; render(); }
+  if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault();
+    flipped = !flipped;
+    var c = $('#card');
+    if (c) c.classList.toggle('flipped', flipped);
+  }
+});
+
+// ============ DOCX 解析 ============
+
+// 动态加载 JSZip（多 CDN 备用）
+var JSZipCDNs = [
+  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+  'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+];
+function tryLoadJSZip(idx, cb) {
+  if (typeof JSZip !== 'undefined') { cb(true); return; }
+  if (idx >= JSZipCDNs.length) { cb(false); return; }
+  var s = document.createElement('script');
+  s.src = JSZipCDNs[idx];
+  s.onload = function(){ cb(true); };
+  s.onerror = function(){ tryLoadJSZip(idx + 1, cb); };
+  document.head.appendChild(s);
+}
+function loadJSZip(cb) {
+  tryLoadJSZip(0, cb);
+}
+
+// HTML 转义
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// 解析 document.xml
+function parseDocx(xmlStr) {
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(xmlStr, 'text/xml');
+  var ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  var paras = doc.getElementsByTagNameNS(ns, 'p');
+  var result = [];
+
+  for (var pi = 0; pi < paras.length; pi++) {
+    var p = paras[pi];
+    // 必须有编号
+    if (p.getElementsByTagNameNS(ns, 'numPr').length === 0) continue;
+
+    // 收集 runs
+    var runs = p.getElementsByTagNameNS(ns, 'r');
+
+    // 检测是否有删除线，有则跳过该段落
+    var hasStrike = false;
+    for (var ri = 0; ri < runs.length; ri++) {
+      var rPr = runs[ri].getElementsByTagNameNS(ns, 'rPr')[0];
+      if (rPr) {
+        var strikeEls = rPr.getElementsByTagNameNS(ns, 'strike');
+        for (var sk = 0; sk < strikeEls.length; sk++) {
+          var val = strikeEls[sk].getAttributeNS(ns, 'val');
+          if (!val || val === 'true' || val === '1') { hasStrike = true; break; }
+        }
+      }
+      if (hasStrike) break;
+    }
+    if (hasStrike) continue;
+
+    var segs = [];
+    for (var ri = 0; ri < runs.length; ri++) {
+      var r = runs[ri];
+      var tEls = r.getElementsByTagNameNS(ns, 't');
+      var txt = '';
+      for (var ti = 0; ti < tEls.length; ti++) {
+        txt += tEls[ti].textContent;
+      }
+      if (!txt) continue;
+
+      // 高亮检测：w:highlight 或 w:shd 黄色底纹
+      var hl = false;
+      // 1) Word 高亮 (highlight)
+      var hlEls = r.getElementsByTagNameNS(ns, 'highlight');
+      for (var hi = 0; hi < hlEls.length; hi++) {
+        var v = hlEls[hi].getAttributeNS(ns, 'val');
+        if (v && v !== 'none') { hl = true; break; }
+      }
+      // 2) Word 底纹 (shading) — 黄色底纹视为高亮
+      if (!hl) {
+        var shdEls = r.getElementsByTagNameNS(ns, 'shd');
+        for (var si = 0; si < shdEls.length; si++) {
+          var fill = shdEls[si].getAttributeNS(ns, 'fill');
+          if (fill && fill.toUpperCase() !== 'AUTO' && fill.toUpperCase() !== 'NONE') {
+            hl = true; break;
+          }
+        }
+      }
+      segs.push({ t: txt, hl: hl });
+    }
+
+    if (segs.length === 0) continue;
+
+    // 合并连续高亮 → 填空
+    var full = '', blanks = [], qparts = [], aparts = [];
+    var bi = 0; // blank 序号
+    var i = 0;
+    while (i < segs.length) {
+      if (segs[i].hl) {
+        var combined = '';
+        while (i < segs.length && segs[i].hl) { combined += segs[i].t; i++; }
+        bi++;
+        blanks.push(combined);
+        qparts.push('<span class="blk">(' + bi + ')</span>');
+        aparts.push('<span class="ans">' + esc(combined) + '</span>');
+        full += combined;
+      } else {
+        full += segs[i].t;
+        qparts.push(esc(segs[i].t));
+        aparts.push(esc(segs[i].t));
+        i++;
+      }
+    }
+
+    if (!full.trim()) continue;
+
+    result.push({
+      id: 'd' + hashStr(full),
+      full: full.trim(),
+      qhtml: qparts.join(''),
+      ahtml: aparts.join(''),
+      ans: blanks
+    });
+  }
+  return result;
+}
+
+function hashStr(s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+  return Math.abs(h).toString(36);
+}
+
+// 处理上传的 DOCX
+function handleFile(file) {
+  toast('正在解析…');
+  loadJSZip(function(ok) {
+    if (!ok) { toast('JSZip 加载失败，请检查网络'); return; }
+    var fname = file.name;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      JSZip.loadAsync(e.target.result).then(function(zip) {
+        var docXml = zip.file('word/document.xml');
+        if (!docXml) { toast('无法读取文档内容'); return; }
+        return docXml.async('string');
+      }).then(function(xml) {
+        if (!xml) return;
+        var parsed = parseDocx(xml);
+        if (parsed.length === 0) {
+          toast('未找到编号知识点，请确认文档含编号段落');
+          return;
+        }
+        cards = parsed;
+        saveCards();
+        saveFileName(fname);
+        mode = 'seq';
+        $('#fileNameTag').textContent = fname;
+        $('#pageTitle').textContent = fname.replace(/\.docx$/i,'');
+        refreshUI();
+        toast('成功提取 ' + cards.length + ' 张闪卡');
+      }).catch(function(err) {
+        console.error(err);
+        toast('解析失败: ' + err.message);
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// 上传按钮事件
+$('#upBtn').addEventListener('click', function(){ $('#fileInp').click(); });
+$('#fileInp').addEventListener('change', function(){
+  var f = $('#fileInp').files[0];
+  if (f) handleFile(f);
+});
+
+// ============ 初始 ============
+if (loadCards()) {
+  var fn = loadFileName();
+  $('#fileNameTag').textContent = fn;
+  $('#pageTitle').textContent = fn.replace(/\.docx$/i,'') || '知识点闪卡背诵';
+  mode = 'seq';
+  refreshUI();
+} else {
+  loadTest();
+  saveCards();
+}
+</script>
+</body>
+</html>
